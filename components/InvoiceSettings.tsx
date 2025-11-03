@@ -325,7 +325,6 @@ export const InvoiceSettingsForm: React.FC<InvoiceSettingsProps> = ({ initialSet
             </div>
           </div>
 
-
           <div className="border-t border-cyan-500/10 pt-8">
               <h2 className="text-2xl font-bold text-white text-3d">شكل الفاتورة</h2>
               <div className="space-y-6 mt-4">

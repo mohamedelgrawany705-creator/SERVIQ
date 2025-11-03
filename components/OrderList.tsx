@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Order } from '../types';
-import { DocumentTextIcon, PlusIcon, EllipsisVerticalIcon, PencilIcon, TrashIcon, XCircleIcon } from './icons';
+import { DocumentTextIcon, PlusIcon, EllipsisVerticalIcon, PencilIcon, TrashIcon, XCircleIcon, QueueListIcon } from './icons';
 
 interface OrderListProps {
   orders: Order[];
   onViewInvoice: (order: Order) => void;
   onCreateOrder: () => void;
+  onBatchCreate: () => void;
   onEditOrder: (order: Order) => void;
   onDeleteOrder: (orderId: string) => void;
   onCancelOrder: (orderId: string) => void;
@@ -28,10 +29,10 @@ const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' }).format(amount);
 };
 
-const ActionButton: React.FC<{onClick: () => void, children: React.ReactNode}> = ({ onClick, children }) => (
+const ActionButton: React.FC<{onClick: () => void, children: React.ReactNode, secondary?: boolean}> = ({ onClick, children, secondary = false }) => (
     <button
         onClick={onClick}
-        className="hologram-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg icon-glow"
+        className={`hologram-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg icon-glow ${secondary ? '!bg-cyan-500/10 !border-cyan-500/30 !text-cyan-300 hover:!bg-cyan-500/20' : ''}`}
     >
         {children}
     </button>
@@ -80,7 +81,7 @@ const ActionsMenu: React.FC<{ order: Order; onView: () => void; onEdit: () => vo
 };
 
 
-export const OrderList: React.FC<OrderListProps> = ({ orders, onViewInvoice, onCreateOrder, onEditOrder, onDeleteOrder, onCancelOrder }) => {
+export const OrderList: React.FC<OrderListProps> = ({ orders, onViewInvoice, onCreateOrder, onBatchCreate, onEditOrder, onDeleteOrder, onCancelOrder }) => {
     const calculateTotal = (order: Order) => order.items
       .filter(item => !item.isGift)
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -102,50 +103,55 @@ export const OrderList: React.FC<OrderListProps> = ({ orders, onViewInvoice, onC
 
   return (
     <div>
-        <div className="flex justify-start mb-6">
+        <div className="flex justify-start gap-4 mb-6">
             <ActionButton onClick={onCreateOrder}>
                 <PlusIcon className="h-5 w-5" />
                 إنشاء طلب جديد
             </ActionButton>
+             <ActionButton onClick={onBatchCreate} secondary>
+                <QueueListIcon className="h-5 w-5" />
+                إنشاء دفعة
+            </ActionButton>
         </div>
-      <div className="hologram-panel rounded-xl">
-        <div>
-          <table className="min-w-full divide-y divide-cyan-500/10 hidden md:table">
-            <thead className="bg-black/20">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">رقم الطلب</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">العميل</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">التاريخ</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">الإجمالي</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">الحالة</th>
-                <th scope="col" className="relative px-6 py-3"><span className="sr-only">إجراءات</span></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-cyan-500/10">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-purple-900/20 transition-all duration-200">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-400">{order.orderNumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{order.customerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(order.orderDate).toLocaleDateString('ar-EG')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200 font-semibold">{formatCurrency(calculateTotal(order))}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(order.status)}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
-                     <ActionsMenu 
-                        order={order}
-                        onView={() => onViewInvoice(order)} 
-                        onEdit={() => onEditOrder(order)}
-                        onCancel={() => onCancelOrder(order.id)}
-                        onDelete={() => onDeleteOrder(order.id)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="hologram-panel rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-cyan-500/10 hidden md:table">
+                <thead className="bg-black/20">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">رقم الطلب</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">العميل</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">التاريخ</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">الإجمالي</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-cyan-400 uppercase tracking-wider text-3d">الحالة</th>
+                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">إجراءات</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-cyan-500/10">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-purple-900/20 transition-all duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-purple-400">{order.orderNumber}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200">{order.customerName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(order.orderDate).toLocaleDateString('ar-EG')}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-200 font-semibold">{formatCurrency(calculateTotal(order))}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                         <ActionsMenu 
+                            order={order}
+                            onView={() => onViewInvoice(order)} 
+                            onEdit={() => onEditOrder(order)}
+                            onCancel={() => onCancelOrder(order.id)}
+                            onDelete={() => onDeleteOrder(order.id)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 md:hidden">
             {orders.map(order => (
                 <div key={order.id} className="hologram-panel hologram-panel-interactive rounded-xl p-4 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1">
@@ -173,7 +179,6 @@ export const OrderList: React.FC<OrderListProps> = ({ orders, onViewInvoice, onC
                 </div>
             ))}
           </div>
-        </div>
       </div>
     </div>
   );

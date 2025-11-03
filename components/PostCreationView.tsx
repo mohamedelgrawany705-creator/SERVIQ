@@ -31,7 +31,9 @@ export const PostCreationView: React.FC<PostCreationViewProps> = ({ order, setti
             const link = document.createElement('a');
             link.download = `فاتورة-${order.orderNumber}.png`;
             link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         } catch (error) {
             console.error('Failed to download invoice as PNG', error);
             alert('حدث خطأ أثناء محاولة تنزيل الفاتورة.');

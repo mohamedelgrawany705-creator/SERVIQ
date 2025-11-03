@@ -99,25 +99,27 @@ export const InvoiceView: React.FC<InvoiceViewProps> = ({ order, onBack, setting
   const fullDataQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodedFullData}&qzone=1`;
 
   const handleDownload = async () => {
-      if (!invoiceRef.current) return;
-      setIsDownloading(true);
-      try {
-        const canvas = await html2canvas(invoiceRef.current, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-        });
-        const link = document.createElement('a');
-        link.download = `فاتورة-${order.orderNumber}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } catch (error) {
-        console.error('Failed to download invoice as PNG', error);
-        alert('حدث خطأ أثناء محاولة تنزيل الفاتورة.');
-      } finally {
-        setIsDownloading(false);
-      }
-    };
+    if (!invoiceRef.current) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const link = document.createElement('a');
+      link.download = `فاتورة-${order.orderNumber}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download invoice as PNG', error);
+      alert('حدث خطأ أثناء محاولة تنزيل الفاتورة.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto">

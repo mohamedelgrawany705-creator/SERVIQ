@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import html2canvas from 'html2canvas';
 import { Order, InvoiceSettings, View, Product } from './types';
 import useLocalStorage from './hooks/useLocalStorage';
 import { Header } from './components/Header';
@@ -14,6 +16,8 @@ import { Breadcrumbs } from './components/Breadcrumbs';
 import { PostCreationView } from './components/PostCreationView';
 import { Modal } from './components/Modal';
 import { TrashIcon } from './components/icons';
+import { BatchOrderForm } from './components/BatchOrderForm';
+import { InvoicePreview } from './components/InvoicePreview';
 
 // Fix: Replaced dynamic UUIDs with static IDs for product consistency.
 const initialProducts: Product[] = [
@@ -123,6 +127,65 @@ const App: React.FC = () => {
     navigate('post-creation');
   };
 
+  const handleAddBatchOrders = async (batchOrders: Omit<Order, 'id' | 'orderNumber' | 'orderDate' | 'status'>[]) => {
+      const newOrders = batchOrders.map((orderData, index) => ({
+          ...orderData,
+          id: crypto.randomUUID(),
+          orderNumber: `SRV-${(Date.now() + index).toString().slice(-6)}`,
+          orderDate: new Date().toISOString(),
+          status: 'قيد التنفيذ' as const,
+      }));
+      setOrders(prevOrders => [...newOrders, ...prevOrders]);
+
+      if (newOrders.length > 0) {
+        const downloadContainer = document.createElement('div');
+        downloadContainer.style.position = 'fixed';
+        downloadContainer.style.left = '-9999px';
+        downloadContainer.style.top = '-9999px';
+        document.body.appendChild(downloadContainer);
+        const root = createRoot(downloadContainer);
+
+        const downloadInvoice = async (order: Order) => {
+            return new Promise<void>((resolve) => {
+                root.render(<InvoicePreview order={order} settings={invoiceSettings} />);
+
+                setTimeout(async () => {
+                    try {
+                        const invoiceElement = downloadContainer.querySelector('.invoice-sheet') as HTMLElement;
+                        if (!invoiceElement) throw new Error("Invoice element not found for capturing.");
+
+                        const canvas = await html2canvas(invoiceElement, {
+                            scale: 2,
+                            useCORS: true,
+                            backgroundColor: '#ffffff',
+                        });
+                        const link = document.createElement('a');
+                        link.download = `فاتورة-${order.orderNumber}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } catch (downloadError) {
+                        console.error(`Error during auto-download for order ${order.orderNumber}:`, downloadError);
+                    } finally {
+                        resolve();
+                    }
+                }, 500);
+            });
+        };
+
+        for (const order of newOrders) {
+            await downloadInvoice(order);
+            await new Promise(resolve => setTimeout(resolve, 200)); 
+        }
+
+        root.unmount();
+        document.body.removeChild(downloadContainer);
+    }
+
+      resetTo('list');
+  };
+
   const handleUpdateOrder = (updatedOrder: Order) => {
     setOrders(prevOrders => prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
     setEditingOrder(null);
@@ -182,17 +245,23 @@ const App: React.FC = () => {
                     settings={invoiceSettings} 
                     productList={products} 
                 />;
+      case 'batch-form':
+        return <BatchOrderForm 
+                    onAddBatchOrders={handleAddBatchOrders}
+                    productList={products}
+                    onBack={goBack}
+                />;
       case 'invoice':
-        return selectedOrder ? <InvoiceView order={selectedOrder} onBack={goBack} settings={invoiceSettings} /> : <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
+        return selectedOrder ? <InvoiceView order={selectedOrder} onBack={goBack} settings={invoiceSettings} /> : <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onBatchCreate={() => navigate('batch-form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
       case 'settings':
         return <InvoiceSettingsForm initialSettings={invoiceSettings} onSave={handleSaveSettings} onCancel={goBack} products={products} />;
       case 'products':
         return <ProductManagement products={products} setProducts={handleSetProducts} />;
       case 'post-creation':
-        return lastCreatedOrder ? <PostCreationView order={lastCreatedOrder} settings={invoiceSettings} onDone={() => resetTo('list')} /> : <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
+        return lastCreatedOrder ? <PostCreationView order={lastCreatedOrder} settings={invoiceSettings} onDone={() => resetTo('list')} /> : <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onBatchCreate={() => navigate('batch-form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
       case 'list':
       default:
-        return <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
+        return <OrderList orders={orders} onViewInvoice={handleViewInvoice} onCreateOrder={() => navigate('form')} onBatchCreate={() => navigate('batch-form')} onEditOrder={handleEditOrder} onDeleteOrder={handleDeleteOrder} onCancelOrder={handleCancelOrder} />;
     }
   };
 
@@ -216,7 +285,7 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
       </div>
-      
+
       <Modal
         isOpen={!!orderToDelete}
         onClose={() => setOrderToDelete(null)}

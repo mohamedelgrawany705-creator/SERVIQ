@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import html2canvas from 'html2canvas';
 import { GoogleGenAI, Type } from '@google/genai';
 import { Order, OrderItem, OrderStatus, InvoiceSettings, Product } from '../types';
 import { PlusIcon, TrashIcon, SparklesIcon, SpinnerIcon } from './icons';
@@ -135,25 +137,31 @@ export const OrderForm: React.FC<OrderFormProps> = ({ onAddOrder, onUpdateOrder,
         };
         
         const prompt = `
-        حلل النص التالي لاستخراج تفاصيل الطلب.
+        مهمتك هي استخراج معلومات طلب العميل من النص التالي بدقة مطلقة.
         النص: "${aiPrompt}"
 
         المنتجات المتاحة هي: [${availableProductsString}].
 
-        المهمة:
-        1. استخرج معلومات العميل (الاسم، الهاتف، المحافظة، العنوان).
-        2. بالنسبة لكل عنصر في الطلب، ابحث عن المنتج الأكثر تطابقًا من قائمة "المنتجات المتاحة". استخدم المعنى وليس فقط الكلمات الدقيقة (مثلاً، "لوجو" يجب أن يطابق المنتج الذي اسمه "تصميم شعار").
-        3. قم بإرجاع معرف المنتج (ID) وليس اسمه.
-        4. إذا ذكر أن شيئًا ما "هدية" أو "مجاني"، فاجعل isGift true.
-        5. قم بتنسيق الإخراج كملف JSON يتبع المخطط المحدد.
+        **قواعد صارمة:**
+        - **النسخ الحرفي:** يجب عليك نسخ معلومات العميل (الاسم، الهاتف، العنوان، المحافظة) حرفيًا كما هي موجودة في النص، حتى لو كانت تحتوي على أخطاء إملائية. **لا تقم بتصحيح أو تغيير أي شيء على الإطلاق.**
+        - **مطابقة المنتج:** طابق العناصر المذكورة في النص مع أنسب منتج من قائمة "المنتجات المتاحة" وأرجع الـ ID الخاص به.
+        - **الهدايا:** إذا تم ذكر عنصر كـ "هدية" أو "مجاني"، اجعل قيمة isGift true.
+        - **التنسيق:** يجب أن يكون الإخراج بتنسيق JSON صالح يتبع المخطط المحدد.
+
+        مثال على النسخ الحرفي: إذا كان الاسم في النص "احممد"، يجب أن تستخرجه "احممد" وليس "أحمد".
+        
+        قم باستخراج البيانات الآن.
         `;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
+                systemInstruction: 'أنت مساعد استخراج بيانات آلي فائق الدقة. مهمتك الأساسية هي النسخ الحرفي للمعلومات من النص المقدم دون أي تعديل أو تصحيح إملائي. الدقة المطلقة هي الأولوية القصوى.',
                 responseMimeType: "application/json",
                 responseSchema: schema,
+                temperature: 0,
+                thinkingConfig: { thinkingBudget: 0 },
             }
         });
 
@@ -166,8 +174,9 @@ export const OrderForm: React.FC<OrderFormProps> = ({ onAddOrder, onUpdateOrder,
         if (parsedData.customerGovernorate && governorates.includes(parsedData.customerGovernorate)) setCustomerGovernorate(parsedData.customerGovernorate);
         if (parsedData.customerAddress) setCustomerAddress(parsedData.customerAddress);
 
+        let newItems: OrderItem[] = [];
         if (parsedData.items && Array.isArray(parsedData.items)) {
-            const newItems = parsedData.items
+            newItems = parsedData.items
               .map((item: any) => {
                   if (!item.productId) return null;
                   const product = productList.find(p => p.id === item.productId);
@@ -184,12 +193,67 @@ export const OrderForm: React.FC<OrderFormProps> = ({ onAddOrder, onUpdateOrder,
               .filter(Boolean); // Remove nulls
               
             if (newItems.length > 0) {
-                setItems(newItems as OrderItem[]);
-            } else if (parsedData.items.length > 0) {
-                setAiError("لم يتم العثور على منتجات مطابقة في قائمتك. يرجى التأكد من أن المنتجات المذكورة موجودة.");
+                setItems(newItems);
             }
         }
         setAiPrompt('');
+
+        // Auto-download logic
+        const generatedOrderForDownload: Order = {
+            id: 'ai-generated-preview',
+            orderNumber: `SRV-${Date.now().toString().slice(-6)}`,
+            customerName: parsedData.customerName || '',
+            customerPhone1: parsedData.customerPhone1 || '',
+            customerPhone2: parsedData.customerPhone2 || '',
+            customerGovernorate: parsedData.customerGovernorate || governorates[0],
+            customerAddress: parsedData.customerAddress || '',
+            orderDate: new Date().toISOString(),
+            items: newItems,
+            status: 'قيد التنفيذ',
+            discount: 0
+        };
+
+        if (generatedOrderForDownload.items.length === 0) {
+            if (parsedData.items && parsedData.items.length > 0) {
+                 setAiError("لم يتم العثور على منتجات مطابقة في قائمتك. يرجى التأكد من أن المنتجات المذكورة موجودة.");
+            }
+            return;
+        }
+
+        const downloadContainer = document.createElement('div');
+        downloadContainer.style.position = 'fixed';
+        downloadContainer.style.left = '-9999px';
+        downloadContainer.style.top = '-9999px';
+        document.body.appendChild(downloadContainer);
+
+        const root = createRoot(downloadContainer);
+        root.render(<InvoicePreview order={generatedOrderForDownload} settings={settings} />);
+
+        setTimeout(async () => {
+            try {
+                const invoiceElement = downloadContainer.querySelector('.invoice-sheet') as HTMLElement;
+                if (!invoiceElement) throw new Error("Invoice element not found for capturing.");
+                
+                const canvas = await html2canvas(invoiceElement, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                });
+                const link = document.createElement('a');
+                link.download = `فاتورة-${generatedOrderForDownload.orderNumber}.png`;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (downloadError) {
+                console.error("Error during auto-download:", downloadError);
+                setAiError("تم ملء النموذج بنجاح، ولكن فشل التنزيل التلقائي.");
+            } finally {
+                root.unmount();
+                document.body.removeChild(downloadContainer);
+            }
+        }, 500);
+
 
     } catch (error) {
         console.error("Error generating with AI:", error);
@@ -317,12 +381,12 @@ export const OrderForm: React.FC<OrderFormProps> = ({ onAddOrder, onUpdateOrder,
                 <SparklesIcon className="text-purple-400"/>
                 إنشاء باستخدام الذكاء الاصطناعي
             </h3>
-            <p className="text-sm text-gray-400 mt-1">صف الطلب بالكامل، وسيقوم الذكاء الاصطناعي بملء جميع الحقول لك.</p>
+            <p className="text-sm text-gray-400 mt-1">صف الطلب بالكامل، وسيقوم الذكاء الاصطناعي بملء جميع الحقول لك وتنزيل الفاتورة تلقائيًا.</p>
             <div className="mt-4 flex flex-col sm:flex-row gap-2">
                 <textarea
                     value={aiPrompt}
                     onChange={e => setAiPrompt(e.target.value)}
-                    placeholder="مثال: طلب لـ أحمد محمود، هاتف 01234567890، من القاهرة، بالعنوان 15 شارع طلعت حرب. الطلب يحتوي على تصميم موقع ويب واحد، وإدارة حسابات التواصل الاجتماعي لمدة شهر كهدية."
+                    placeholder="مثال: طلب لـ أحمد محمود، هاتف 01234567890، من القاهرة، بالعنوان 15 شارع طلعت حرب. الطلب يحتوي على تصميم موقع ويب واحد، وإدارة حسابات التواصل الاجتماعية لمدة شهر كهدية."
                     className={`${inputBaseClasses} flex-grow`}
                     rows={3}
                     disabled={isGenerating}

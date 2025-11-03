@@ -11,6 +11,7 @@ const viewToNameMap: Record<View, string> = {
   dashboard: 'احصائيات المبيعات',
   list: 'لوحة الطلبات',
   form: 'طلب جديد',
+  'batch-form': 'إنشاء فواتير متعددة',
   invoice: 'عرض الفاتورة',
   settings: 'اعدادات الفاتورة',
   products: 'المنتجات',

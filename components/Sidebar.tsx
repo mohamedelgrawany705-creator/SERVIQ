@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { DocumentTextIcon, PlusIcon, CogIcon, XMarkIcon, ChartPieIcon, CubeIcon, Squares2x2Icon } from './icons';
+import { DocumentTextIcon, PlusIcon, CogIcon, XMarkIcon, ChartPieIcon, CubeIcon, Squares2x2Icon, QueueListIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -84,6 +84,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, currentView, 
             icon={<PlusIcon className="h-5 w-5" />}
             isActive={currentView === 'form'}
             onClick={() => onNavigate('form')}
+          />
+          <NavItem
+            label="إنشاء دفعة"
+            icon={<QueueListIcon className="h-5 w-5" />}
+            isActive={currentView === 'batch-form'}
+            onClick={() => onNavigate('batch-form')}
           />
            <NavItem
             label="المنتجات"

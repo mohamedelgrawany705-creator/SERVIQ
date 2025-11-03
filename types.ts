@@ -53,4 +53,4 @@ export interface Product {
 }
 
 
-export type View = 'home' | 'dashboard' | 'list' | 'form' | 'invoice' | 'settings' | 'products' | 'post-creation';
+export type View = 'home' | 'dashboard' | 'list' | 'form' | 'invoice' | 'settings' | 'products' | 'post-creation' | 'batch-form';
