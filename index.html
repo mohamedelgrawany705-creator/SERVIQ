@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Serviq | إنشاء فواتير</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes glow {
+        from {
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #67e8f9, 0 0 20px #67e8f9;
+        }
+        to {
+            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #a78bfa, 0 0 40px #a78bfa;
+        }
+      }
+
+      body {
+        background-color: #020617;
+        background-image: 
+          linear-gradient(rgba(107, 33, 168, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(107, 33, 168, 0.08) 1px, transparent 1px);
+        background-size: 2.5rem 2.5rem;
+      }
+      
+      .hologram-title {
+        color: #f0f9ff;
+        animation: glow 1.8s ease-in-out infinite alternate;
+      }
+
+      .hologram-logo {
+        background: linear-gradient(90deg, #a78bfa, #67e8f9);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-fill-color: transparent;
+        /* More pronounced 3D effect */
+        text-shadow: 
+          1px -1px 0px rgba(103, 232, 249, 0.3), /* Top-right cyan highlight */
+          -1px 1px 0px rgba(167, 139, 250, 0.4), /* Bottom-left purple shadow */
+          0px 1px 1px rgba(0,0,0,0.5),
+          0px 2px 2px rgba(0,0,0,0.4),
+          0px 3px 3px rgba(0,0,0,0.3),
+          0 0 10px rgba(167, 139, 250, 0.7),
+          0 0 20px rgba(103, 232, 249, 0.6);
+        transition: text-shadow 0.3s ease-in-out;
+      }
+      .hologram-logo:hover {
+        text-shadow: 
+          1px -1px 0px rgba(103, 232, 249, 0.4),
+          -1px 1px 0px rgba(167, 139, 250, 0.5),
+          0px 1px 1px rgba(0,0,0,0.5),
+          0px 2px 2px rgba(0,0,0,0.4),
+          0px 3px 3px rgba(0,0,0,0.3),
+          0 0 15px rgba(167, 139, 250, 0.9),
+          0 0 30px rgba(103, 232, 249, 0.8);
+      }
+
+      .text-3d { /* Re-purposing for neon text */
+        color: #f0f9ff;
+        text-shadow: 0 0 4px rgba(56, 189, 248, 0.6), 0 0 6px rgba(139, 92, 246, 0.3);
+      }
+
+      .hologram-panel {
+        background: rgba(14, 23, 49, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.1), inset 0 0 15px rgba(56, 189, 248, 0.05);
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+      .hologram-panel-interactive:hover {
+        border-color: rgba(96, 165, 250, 0.5);
+        box-shadow: 0 0 35px rgba(96, 165, 250, 0.2), inset 0 0 20px rgba(96, 165, 250, 0.1);
+      }
+
+      .hologram-input {
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+      .hologram-input:focus {
+        outline: none !important;
+        ring: 0;
+        border-color: rgba(139, 92, 246, 0.8) !important;
+        box-shadow: 0 2px 5px -2px rgba(139, 92, 246, 0.5) !important;
+      }
+      
+      /* FIX: Style select elements to look like dropdowns */
+      select.hologram-input {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2338bdf8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-position: left 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em;
+        padding-left: 2.5rem !important;
+      }
+      select.hologram-input option {
+        background-color: #0c152e;
+        color: #e0e7ff;
+      }
+
+      .hologram-btn {
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        color: #c7d2fe;
+        text-shadow: 0 0 5px rgba(139, 92, 246, 0.5);
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.2), inset 0 0 5px rgba(139, 92, 246, 0.1);
+        transition: all 0.2s ease-in-out;
+      }
+      .hologram-btn:hover {
+        background: rgba(139, 92, 246, 0.2);
+        border-color: rgba(167, 139, 250, 0.7);
+        box-shadow: 0 0 15px rgba(167, 139, 250, 0.4), inset 0 0 8px rgba(167, 139, 250, 0.2);
+        color: #fff;
+      }
+      .hologram-btn:active {
+        transform: scale(0.97);
+        box-shadow: 0 0 5px rgba(167, 139, 250, 0.3), inset 0 0 15px rgba(167, 139, 250, 0.4);
+      }
+      .hologram-btn[disabled] {
+        background: rgba(100, 116, 139, 0.1);
+        border-color: rgba(100, 116, 139, 0.2);
+        color: #64748b;
+        cursor: not-allowed;
+        text-shadow: none;
+        box-shadow: none;
+      }
+      
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.3);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.5); }
+
+      .icon-glow svg { transition: filter 0.2s ease-in-out; }
+      .icon-glow:hover svg { filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8)); }
+      .icon-glow.icon-glow-red:hover svg { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8)); }
+      .icon-glow:active { transform: scale(0.95); }
+
+      @media print {
+        .no-print { display: none !important; }
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          background: none;
+          margin: 0;
+          padding: 0;
+        }
+        .print-area {
+          padding: 0 !important;
+          background: none !important;
+          border: none !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+        }
+        .invoice-sheet {
+          margin: 0 !important;
+          padding: 0 !important;
+          border: initial !important;
+          border-radius: initial !important;
+          width: 100% !important;
+          min-height: initial !important;
+          height: auto !important;
+          box-shadow: none !important;
+          background: white !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1"
+  }
+}
+</script>
+</head>
+  <body class="text-gray-200 font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="./dist/bundle.js"></script>
+  </body>
+</html>
